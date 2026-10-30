@@ -1,0 +1,31 @@
+[package]
+name    = "gpio-basic"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[[bin]]
+name = "gpio-basic"
+path = "src/main.rs"
+
+[dependencies]
+ameba-rt      = { path = "../../../ameba-rt" }
+ameba-hal     = { path = "../../../ameba-hal" }
+ameba-rom-sys = { path = "../../../ameba-rom-sys" }
+
+cortex-m    = { version = "0.7", features = ["critical-section-single-core"] }
+cortex-m-rt = "0.7"
+
+embedded-hal = "1.0"
+
+[profile.release]
+panic         = "abort"
+lto           = false
+opt-level     = "z"
+codegen-units = 1
+debug         = false
+strip         = "none"
+
+[profile.dev]
+panic     = "abort"
+opt-level = "z"

@@ -1,0 +1,35 @@
+#[doc = "Register `SAR4` reader"]
+pub type R = crate::R<Sar4Spec>;
+#[doc = "Register `SAR4` writer"]
+pub type W = crate::W<Sar4Spec>;
+#[doc = "Field `SAR4` reader - Source Address of DMA transfer.Updated after each source transfer. The SINC field in the CTLx register determines whether the address increments, or is left unchanged on every source transfer throughout the block transfer."]
+pub type Sar4R = crate::FieldReader<u32>;
+#[doc = "Field `SAR4` writer - Source Address of DMA transfer.Updated after each source transfer. The SINC field in the CTLx register determines whether the address increments, or is left unchanged on every source transfer throughout the block transfer."]
+pub type Sar4W<'a, REG> = crate::FieldWriter<'a, REG, 32, u32>;
+impl R {
+    #[doc = "Bits 0:31 - Source Address of DMA transfer.Updated after each source transfer. The SINC field in the CTLx register determines whether the address increments, or is left unchanged on every source transfer throughout the block transfer."]
+    #[inline(always)]
+    pub fn sar4(&self) -> Sar4R {
+        Sar4R::new(self.bits)
+    }
+}
+impl W {
+    #[doc = "Bits 0:31 - Source Address of DMA transfer.Updated after each source transfer. The SINC field in the CTLx register determines whether the address increments, or is left unchanged on every source transfer throughout the block transfer."]
+    #[inline(always)]
+    pub fn sar4(&mut self) -> Sar4W<'_, Sar4Spec> {
+        Sar4W::new(self, 0)
+    }
+}
+#[doc = "Channel 4 Source Address Register\n\nYou can [`read`](crate::Reg::read) this register and get [`sar4::R`](R). You can [`reset`](crate::Reg::reset), [`write`](crate::Reg::write), [`write_with_zero`](crate::Reg::write_with_zero) this register using [`sar4::W`](W). You can also [`modify`](crate::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+pub struct Sar4Spec;
+impl crate::RegisterSpec for Sar4Spec {
+    type Ux = u32;
+}
+#[doc = "`read()` method returns [`sar4::R`](R) reader structure"]
+impl crate::Readable for Sar4Spec {}
+#[doc = "`write(|w| ..)` method takes [`sar4::W`](W) writer structure"]
+impl crate::Writable for Sar4Spec {
+    type Safety = crate::Unsafe;
+}
+#[doc = "`reset()` method sets SAR4 to value 0"]
+impl crate::Resettable for Sar4Spec {}

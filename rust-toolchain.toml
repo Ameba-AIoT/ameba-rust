@@ -1,0 +1,23 @@
+# Rust toolchain config for the Ameba Rust SDK.
+#
+# rustup reads this file when any cargo / rustc invocation is made inside
+# this directory or any directory below it. On first use rustup auto-installs
+# the named channel + components + targets — no manual rustup commands needed
+# once the rustup binary itself is on PATH (see scripts/install_toolchain.sh).
+#
+# We use the rolling `stable` channel: no `-Z build-std` (see xtask), and no
+# other nightly-only feature is used anywhere in this repo. `rust-src` is
+# dropped too — it was only needed to build core/compiler_builtins from
+# source for `-Z build-std`; stable ships precompiled libcore/liballoc for
+# our targets already.
+[toolchain]
+channel    = "stable"
+profile    = "minimal"
+components = []
+targets    = [
+    "armv7a-none-eabihf",          # RTL8730E AP / CA32
+    "thumbv8m.main-none-eabihf",   # RTL8730E KM4 + RTL8720E KM4
+    "thumbv8m.main-none-eabi",     # RTL8721F KM4NS + KM4TZ (soft-float, no FPU ABI)
+    "thumbv8m.base-none-eabi",     # RTL8730E KM0 (Cortex-M23)
+    "riscv32imafc-unknown-none-elf", # RTL8720E KR4 (Andes RV32IMAFC)
+]

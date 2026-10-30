@@ -1,0 +1,27 @@
+[package]
+name    = "pbkdf2-bench"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+ameba-rt  = { path = "../../ameba-rt" }
+ameba-hal = { path = "../../ameba-hal" }
+
+cortex-m    = { version = "0.7", features = ["critical-section-single-core"] }
+cortex-m-rt = "0.7"
+
+pbkdf2 = { version = "0.13", default-features = false, features = ["hmac"] }
+sha1   = { version = "0.11", default-features = false }
+
+[profile.release]
+panic         = "abort"
+lto           = false
+opt-level     = "z"
+codegen-units = 1
+debug         = false
+strip         = "none"
+
+[profile.dev]
+panic     = "abort"
+opt-level = "z"

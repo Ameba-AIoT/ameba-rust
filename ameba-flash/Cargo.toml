@@ -1,0 +1,16 @@
+[package]
+name        = "ameba-flash"
+version     = "0.1.0"
+edition     = "2024"
+description = "Image packaging and UART flashing for the Ameba Rust SDK"
+license     = "Apache-2.0"
+publish     = false
+
+[dependencies]
+anyhow = "1.0"
+clap = { version = "4", features = ["derive", "env"] }
+# `default-features = false` is required: the default `libudev` feature pulls in
+# a C library and pkg-config.
+serialport = { version = "4", default-features = false, features = ["usbportinfo-interface"] }
+object = { version = "0.39", default-features = false, features = ["elf", "read_core", "std"] }
+tempfile = "3"

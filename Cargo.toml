@@ -1,0 +1,13 @@
+[workspace]
+resolver = "2"
+members  = ["xtask"]
+exclude  = [
+    "ameba-hal",       # includes pac/rtl8721f (covered by the nested-directory rule)
+    "ameba-ota",
+    "ameba-rom-sys",
+    "ameba-rt",
+    "ameba-storage",
+    "ameba-wifi",
+    "examples",        # directory catch-all: covers every example, no edit needed for new ones
+    "hil-test",
+]

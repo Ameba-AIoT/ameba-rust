@@ -1,0 +1,23 @@
+[package]
+name    = "ameba-ota"
+version = "0.1.0"
+edition = "2024"
+publish = false
+license = "Apache-2.0"
+description = "OTA (dual A/B slot) firmware update for RTL8721F"
+
+[features]
+# Ship an HTTP download transport (pulls in a TCP stack; see src/http.rs).
+http-reqwless = ["dep:reqwless", "dep:embedded-nal-async", "dep:embedded-io-async"]
+
+[dependencies]
+ameba-hal     = { path = "../ameba-hal" }
+ameba-storage = { path = "../ameba-storage" }
+embassy-time  = { version = "0.3", features = ["tick-hz-1_000_000"] }
+
+# HTTP transport (feature-gated). `default-features = false` drops
+# embedded-tls: image authenticity is established by the bootloader's
+# signature check, not by the download channel.
+reqwless            = { version = "0.13", default-features = false, optional = true }
+embedded-nal-async  = { version = "0.8", optional = true }
+embedded-io-async   = { version = "0.6", optional = true }

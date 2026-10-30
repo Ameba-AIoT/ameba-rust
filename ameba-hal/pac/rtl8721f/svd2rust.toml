@@ -1,0 +1,4 @@
+target = "cortex-m"
+
+[settings]
+const_generic = true

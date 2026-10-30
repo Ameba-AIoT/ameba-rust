@@ -1,0 +1,26 @@
+[package]
+name    = "ameba-wifi"
+version = "0.1.0"
+edition = "2024"
+publish = false
+license = "Apache-2.0"
+
+[dependencies]
+ameba-hal    = { path = "../ameba-hal" }
+embedded-hal = "1.0"
+embassy-sync = "0.6"
+embassy-time = "0.3"
+embassy-net-driver = "0.2"
+critical-section = "1.1"
+cortex-m     = "0.7"
+pbkdf2       = { version = "0.13", default-features = false, features = ["hmac"] }
+sha1         = { version = "0.11", default-features = false }
+hmac         = { version = "0.13", default-features = false }
+aes-kw       = { version = "0.3.1", default-features = false }
+smoltcp      = { version = "0.11", default-features = false, features = [
+    "medium-ethernet",
+    "proto-ipv4",
+    "socket-tcp",
+    "socket-udp",
+    "socket-dhcpv4",
+] }

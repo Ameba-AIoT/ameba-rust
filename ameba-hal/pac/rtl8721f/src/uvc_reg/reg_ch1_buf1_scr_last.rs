@@ -1,0 +1,20 @@
+#[doc = "Register `REG_CH1_BUF1_SCR_LAST` reader"]
+pub type R = crate::R<RegCh1Buf1ScrLastSpec>;
+#[doc = "Field `ch1_buf1_scr_last` reader - "]
+pub type Ch1Buf1ScrLastR = crate::FieldReader<u32>;
+impl R {
+    #[doc = "Bits 0:31"]
+    #[inline(always)]
+    pub fn ch1_buf1_scr_last(&self) -> Ch1Buf1ScrLastR {
+        Ch1Buf1ScrLastR::new(self.bits)
+    }
+}
+#[doc = "\n\nYou can [`read`](crate::Reg::read) this register and get [`reg_ch1_buf1_scr_last::R`](R). See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+pub struct RegCh1Buf1ScrLastSpec;
+impl crate::RegisterSpec for RegCh1Buf1ScrLastSpec {
+    type Ux = u32;
+}
+#[doc = "`read()` method returns [`reg_ch1_buf1_scr_last::R`](R) reader structure"]
+impl crate::Readable for RegCh1Buf1ScrLastSpec {}
+#[doc = "`reset()` method sets REG_CH1_BUF1_SCR_LAST to value 0"]
+impl crate::Resettable for RegCh1Buf1ScrLastSpec {}

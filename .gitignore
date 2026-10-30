@@ -1,0 +1,27 @@
+# Cargo build outputs (must never be committed; agents may build inside crates/)
+target/
+**/target/
+
+# xtask build outputs
+build/
+
+# rustdoc output (cargo xtask build doc)
+docs/
+
+# Editor / OS junk
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Local override of toolchain pin (per-developer experiments)
+rust-toolchain.toml.local
+
+# Cargo.lock policy
+#   Library crates (has src/lib.rs, no src/main.rs) → do NOT commit.
+#     Dependencies are locked by the final binary consumer.
+#   Binary crates (has src/main.rs, no src/lib.rs) → DO commit.
+#     Lockfile guarantees reproducible firmware builds.
+Cargo.lock
+!/Cargo.lock
+!/examples/**/Cargo.lock

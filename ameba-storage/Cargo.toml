@@ -1,0 +1,21 @@
+[package]
+name    = "ameba-storage"
+version = "0.1.0"
+edition = "2024"
+publish = false
+license = "Apache-2.0"
+description = "NOR Flash storage driver for Realtek Ameba series chips"
+
+[features]
+default     = ["embedded-storage"]
+# Enable embedded-storage trait impls (ReadStorage, Storage, ReadNorFlash, NorFlash)
+embedded-storage = ["dep:embedded-storage"]
+# Use an in-memory stub backend instead of real hardware (for host/unit tests)
+emulation = []
+
+[dependencies]
+ameba-rom-sys    = { path = "../ameba-rom-sys" }
+cortex-m         = "0.7"
+embedded-storage = { version = "0.3", optional = true }
+
+[dev-dependencies]

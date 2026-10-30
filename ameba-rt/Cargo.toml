@@ -1,0 +1,14 @@
+[package]
+name    = "ameba-rt"
+version = "0.1.0"
+edition = "2024"
+publish = false
+license = "Apache-2.0"
+
+[dependencies]
+# `device` suppresses cortex-m-rt's own fallback `__INTERRUPTS` array (480 entries
+# on armv8m.main) so the PAC's 79-entry one is used instead, and makes its build.rs
+# `INCLUDE device.x`. Must be kept in sync with the PAC's `rt` feature in
+# ameba-hal: enabling only one of the two either duplicates or omits
+# `__INTERRUPTS`. See ameba-hal/ld/rtl8721f/ameba.x.
+cortex-m-rt = { version = "0.7", features = ["device"] }

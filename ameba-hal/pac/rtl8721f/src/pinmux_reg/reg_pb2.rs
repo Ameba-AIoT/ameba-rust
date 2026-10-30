@@ -1,0 +1,135 @@
+#[doc = "Register `REG_PB2` reader"]
+pub type R = crate::R<RegPb2Spec>;
+#[doc = "Register `REG_PB2` writer"]
+pub type W = crate::W<RegPb2Spec>;
+#[doc = "Field `pB2_sel` reader - PAD pinmux function ID selection"]
+pub type PB2SelR = crate::FieldReader;
+#[doc = "Field `pB2_sel` writer - PAD pinmux function ID selection"]
+pub type PB2SelW<'a, REG> = crate::FieldWriter<'a, REG, 8>;
+#[doc = "Field `pB2_ie` reader - PAD input enable control"]
+pub type PB2IeR = crate::BitReader;
+#[doc = "Field `pB2_ie` writer - PAD input enable control"]
+pub type PB2IeW<'a, REG> = crate::BitWriter<'a, REG>;
+#[doc = "Field `pB2_pupdc` reader - Some pad may have two type of PU/PD resistor, this bit can select it. 1: small resistor 0: big resistor"]
+pub type PB2PupdcR = crate::BitReader;
+#[doc = "Field `pB2_pupdc` writer - Some pad may have two type of PU/PD resistor, this bit can select it. 1: small resistor 0: big resistor"]
+pub type PB2PupdcW<'a, REG> = crate::BitWriter<'a, REG>;
+#[doc = "Field `pB2_e2` reader - PAD driving ability control. 0: low 1: high The actual driving current is depend on pad type."]
+pub type PB2E2R = crate::BitReader;
+#[doc = "Field `pB2_e2` writer - PAD driving ability control. 0: low 1: high The actual driving current is depend on pad type."]
+pub type PB2E2W<'a, REG> = crate::BitWriter<'a, REG>;
+#[doc = "Field `pB2_smt` reader - PAD Schmit control"]
+pub type PB2SmtR = crate::BitReader;
+#[doc = "Field `pB2_smt` writer - PAD Schmit control"]
+pub type PB2SmtW<'a, REG> = crate::BitWriter<'a, REG>;
+#[doc = "Field `pB2_sr` reader - PAD slew rate control. 1: slow 0: fast"]
+pub type PB2SrR = crate::BitReader;
+#[doc = "Field `pB2_sr` writer - PAD slew rate control. 1: slow 0: fast"]
+pub type PB2SrW<'a, REG> = crate::BitWriter<'a, REG>;
+#[doc = "Field `pB2_e3` reader - PAD driving ability control. 0: low 1: high The actual driving current is depend on pad type."]
+pub type PB2E3R = crate::BitReader;
+#[doc = "Field `pB2_e3` writer - PAD driving ability control. 0: low 1: high The actual driving current is depend on pad type."]
+pub type PB2E3W<'a, REG> = crate::BitWriter<'a, REG>;
+#[doc = "Field `pB2_dis` reader - PAD shutdown, only when the whole group's dis signals are all 1, the PAD SHDN will pull down to shutdown the group pad. 1. disable pad 0. enable pad"]
+pub type PB2DisR = crate::BitReader;
+#[doc = "Field `pB2_dis` writer - PAD shutdown, only when the whole group's dis signals are all 1, the PAD SHDN will pull down to shutdown the group pad. 1. disable pad 0. enable pad"]
+pub type PB2DisW<'a, REG> = crate::BitWriter<'a, REG>;
+impl R {
+    #[doc = "Bits 0:7 - PAD pinmux function ID selection"]
+    #[inline(always)]
+    pub fn p_b2_sel(&self) -> PB2SelR {
+        PB2SelR::new((self.bits & 0xff) as u8)
+    }
+    #[doc = "Bit 8 - PAD input enable control"]
+    #[inline(always)]
+    pub fn p_b2_ie(&self) -> PB2IeR {
+        PB2IeR::new(((self.bits >> 8) & 1) != 0)
+    }
+    #[doc = "Bit 10 - Some pad may have two type of PU/PD resistor, this bit can select it. 1: small resistor 0: big resistor"]
+    #[inline(always)]
+    pub fn p_b2_pupdc(&self) -> PB2PupdcR {
+        PB2PupdcR::new(((self.bits >> 10) & 1) != 0)
+    }
+    #[doc = "Bit 11 - PAD driving ability control. 0: low 1: high The actual driving current is depend on pad type."]
+    #[inline(always)]
+    pub fn p_b2_e2(&self) -> PB2E2R {
+        PB2E2R::new(((self.bits >> 11) & 1) != 0)
+    }
+    #[doc = "Bit 12 - PAD Schmit control"]
+    #[inline(always)]
+    pub fn p_b2_smt(&self) -> PB2SmtR {
+        PB2SmtR::new(((self.bits >> 12) & 1) != 0)
+    }
+    #[doc = "Bit 13 - PAD slew rate control. 1: slow 0: fast"]
+    #[inline(always)]
+    pub fn p_b2_sr(&self) -> PB2SrR {
+        PB2SrR::new(((self.bits >> 13) & 1) != 0)
+    }
+    #[doc = "Bit 14 - PAD driving ability control. 0: low 1: high The actual driving current is depend on pad type."]
+    #[inline(always)]
+    pub fn p_b2_e3(&self) -> PB2E3R {
+        PB2E3R::new(((self.bits >> 14) & 1) != 0)
+    }
+    #[doc = "Bit 15 - PAD shutdown, only when the whole group's dis signals are all 1, the PAD SHDN will pull down to shutdown the group pad. 1. disable pad 0. enable pad"]
+    #[inline(always)]
+    pub fn p_b2_dis(&self) -> PB2DisR {
+        PB2DisR::new(((self.bits >> 15) & 1) != 0)
+    }
+}
+impl W {
+    #[doc = "Bits 0:7 - PAD pinmux function ID selection"]
+    #[inline(always)]
+    pub fn p_b2_sel(&mut self) -> PB2SelW<'_, RegPb2Spec> {
+        PB2SelW::new(self, 0)
+    }
+    #[doc = "Bit 8 - PAD input enable control"]
+    #[inline(always)]
+    pub fn p_b2_ie(&mut self) -> PB2IeW<'_, RegPb2Spec> {
+        PB2IeW::new(self, 8)
+    }
+    #[doc = "Bit 10 - Some pad may have two type of PU/PD resistor, this bit can select it. 1: small resistor 0: big resistor"]
+    #[inline(always)]
+    pub fn p_b2_pupdc(&mut self) -> PB2PupdcW<'_, RegPb2Spec> {
+        PB2PupdcW::new(self, 10)
+    }
+    #[doc = "Bit 11 - PAD driving ability control. 0: low 1: high The actual driving current is depend on pad type."]
+    #[inline(always)]
+    pub fn p_b2_e2(&mut self) -> PB2E2W<'_, RegPb2Spec> {
+        PB2E2W::new(self, 11)
+    }
+    #[doc = "Bit 12 - PAD Schmit control"]
+    #[inline(always)]
+    pub fn p_b2_smt(&mut self) -> PB2SmtW<'_, RegPb2Spec> {
+        PB2SmtW::new(self, 12)
+    }
+    #[doc = "Bit 13 - PAD slew rate control. 1: slow 0: fast"]
+    #[inline(always)]
+    pub fn p_b2_sr(&mut self) -> PB2SrW<'_, RegPb2Spec> {
+        PB2SrW::new(self, 13)
+    }
+    #[doc = "Bit 14 - PAD driving ability control. 0: low 1: high The actual driving current is depend on pad type."]
+    #[inline(always)]
+    pub fn p_b2_e3(&mut self) -> PB2E3W<'_, RegPb2Spec> {
+        PB2E3W::new(self, 14)
+    }
+    #[doc = "Bit 15 - PAD shutdown, only when the whole group's dis signals are all 1, the PAD SHDN will pull down to shutdown the group pad. 1. disable pad 0. enable pad"]
+    #[inline(always)]
+    pub fn p_b2_dis(&mut self) -> PB2DisW<'_, RegPb2Spec> {
+        PB2DisW::new(self, 15)
+    }
+}
+#[doc = "\n\nYou can [`read`](crate::Reg::read) this register and get [`reg_pb2::R`](R). You can [`reset`](crate::Reg::reset), [`write`](crate::Reg::write), [`write_with_zero`](crate::Reg::write_with_zero) this register using [`reg_pb2::W`](W). You can also [`modify`](crate::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+pub struct RegPb2Spec;
+impl crate::RegisterSpec for RegPb2Spec {
+    type Ux = u32;
+}
+#[doc = "`read()` method returns [`reg_pb2::R`](R) reader structure"]
+impl crate::Readable for RegPb2Spec {}
+#[doc = "`write(|w| ..)` method takes [`reg_pb2::W`](W) writer structure"]
+impl crate::Writable for RegPb2Spec {
+    type Safety = crate::Unsafe;
+}
+#[doc = "`reset()` method sets REG_PB2 to value 0x1900"]
+impl crate::Resettable for RegPb2Spec {
+    const RESET_VALUE: u32 = 0x1900;
+}

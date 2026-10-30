@@ -1,0 +1,19 @@
+[package]
+name = "rtl8721f-pac"
+version = "0.1.0"
+edition = "2024"
+publish = false
+license = "Apache-2.0"
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+cortex-m = "0.7"
+vcell    = "0.1"
+
+[features]
+rt = []
+
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(feature, values("rt"))'] }

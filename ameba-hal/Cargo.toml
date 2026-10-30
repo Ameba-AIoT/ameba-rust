@@ -1,0 +1,43 @@
+[package]
+name    = "ameba-hal"
+version = "0.1.0"
+edition = "2024"
+publish = false
+license = "Apache-2.0"
+
+# Select which PWM timer backs the embassy-time driver.
+# Exactly one must be enabled. Timer4 (PWM0) is the default; Timer5-7 are free for user PWM.
+# Matches stm32-embassy's time-driver-timX pattern.
+[features]
+default          = ["time-driver-tim4"]
+time-driver-tim4 = []   # Timer4 (PWM0) — default
+time-driver-tim5 = []   # Timer5 (PWM1)
+time-driver-tim6 = []   # Timer6 (PWM2)
+time-driver-tim7 = []   # Timer7 (PWM3)
+
+# Drivers that compile but have never been run against real hardware (no
+# example, no internal caller). Off by default so the default build only
+# exposes hardware-verified peripherals; enable to build or extend one of
+# them. Remove a module's gate only once it has an example with a recorded
+# hardware pass.
+unstable         = []
+
+[dependencies]
+embassy-time-driver  = "0.1"
+embassy-time         = { version = "0.3", features = ["tick-hz-1_000_000"] }
+critical-section     = "1.1"
+# `rt` provides the `__INTERRUPTS` vector-table array and links `device.x`
+# (the 79 weak `PROVIDE(..._IRQ = DefaultHandler)` aliases). Must be kept in
+# sync with cortex-m-rt's `device` feature in ameba-rt — see ld/rtl8721f/ameba.x.
+rtl8721f-pac         = { path = "pac/rtl8721f", features = ["rt"] }
+ameba-rom-sys        = { path = "../ameba-rom-sys" }
+embedded-hal         = "1.0"
+embedded-hal-async   = "1.0"
+embedded-io          = "0.7"
+embedded-io-async    = "0.7"
+bitflags             = "2"
+heapless             = "0.8"
+nb                   = "1"
+cortex-m             = "0.7"
+embassy-sync         = "0.6"
+log                  = { version = "0.4", default-features = false }
