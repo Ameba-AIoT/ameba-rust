@@ -1,0 +1,11 @@
+[build]
+target = "thumbv8m.main-none-eabi"
+
+[target.thumbv8m.main-none-eabi]
+linker = "rust-lld"
+runner = "ameba-flash flash --monitor"
+rustflags = [
+    "-Clink-arg=-Tameba.x",
+    "-Clink-arg=--gc-sections",
+    "-Clink-arg=--nmagic",
+]

@@ -198,7 +198,7 @@ download mode automatically, so there is no need to hold any boot button.
   [`ameba-flash`](ameba-flash/README.md) ·
   [`rtl8721f-pac`](ameba-hal/pac/rtl8721f/README.md) ·
   [`xtask`](xtask/README.md)
-- [`examples/`](examples/) — 38 examples, each with a README describing wiring
+- [`examples/`](examples/) — 40 examples, each with a README describing wiring
   and expected output
 - For more information on the Ameba series chips, visit the
   [product page](https://aiot.realmcu.com/en/product/index.html)
@@ -209,7 +209,7 @@ download mode automatically, so there is no need to hold any boot button.
 |:-----|:---------|
 | Getting started | `hello-world`, `delay`, `logger`, `shell` |
 | GPIO & timers | `gpio/{basic,async,interrupt}`, `tim`, `rtc`, `wdg` |
-| Serial buses | `uart/{blocking,interrupt,async,dma}`, `spi/{blocking,interrupt,async,dma}`, `i2c/{blocking,async}`, `can` |
+| Serial buses | `uart/{blocking,interrupt,async,dma}`, `spi/{blocking,interrupt,async,dma}`, `i2c/{blocking,async}`, `can/{loopback,bus,external}` |
 | DMA | `gdma/{basic,multiblock}` |
 | Two-board tests | `board2board/{uart,spi,i2c}-{master,slave}` |
 | Analog & sensors | `adc`, `thermal`, `trng` |
