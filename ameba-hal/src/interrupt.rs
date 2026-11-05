@@ -50,6 +50,8 @@ pub mod typelevel {
         (GDMA0_CHANNEL5_IRQ, PacIrq::GDMA0_CHANNEL5_IRQ),
         (GDMA0_CHANNEL6_IRQ, PacIrq::GDMA0_CHANNEL6_IRQ),
         (GDMA0_CHANNEL7_IRQ, PacIrq::GDMA0_CHANNEL7_IRQ),
+        (CAN0_IRQ, PacIrq::CAN0_IRQ),
+        (CAN1_IRQ, PacIrq::CAN1_IRQ),
     );
 
     /// Placeholder IRQ for type-erased peripherals (AnyUart etc.) that require an

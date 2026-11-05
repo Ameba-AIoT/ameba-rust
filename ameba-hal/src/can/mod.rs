@@ -1,5 +1,5 @@
 use bitflags::bitflags;
-use rtl8721f_pac::{Can0Reg, Can1Reg, can0_reg};
+use rtl8721f_pac::{Can0Reg, Can1Reg, LpSys, can0_reg};
 
 // CAN controller typed register-block pointer constants.
 pub const CAN0_PTR: *const can0_reg::RegisterBlock = Can0Reg::PTR;
@@ -10,6 +10,9 @@ const XTAL_40M: u32 = 40_000_000; // SDK: ameba_clk.h : XTAL_40M
 
 // Number of message buffers.
 const MB_COUNT: usize = 16; // SDK: ameba_can.h : CAN_MESSAGE_BUFFER_SIZE
+
+/// Longest RX DMA frame in words: 2 header words + 8 data bytes.
+pub const RX_DMA_MAX_WORDS: usize = 4;
 
 // CAN bit timing: sync segment is always 1 TQ.
 const SYNC_SEG: u32 = 1;
@@ -208,6 +211,8 @@ impl From<u32> for MsgBufStatus {
 /// Bit timing calculation error.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BitTimingError {
+    /// [`Can::core_clock_set`] has not been called.
+    ClockNotSet,
     InvalidBitRate,
     NoSolutionFound,
     SegmentsOutOfRange,
@@ -623,6 +628,17 @@ impl Can {
         msgbuf_ctrl_modify(self.regs(), idx, rxdma_en, dma_offset);
     }
 
+    /// Read the raw `CAN_MBx_CTRL` register of message buffer `idx` (0..=15).
+    /// Returns 0 for an out-of-range `idx`.
+    pub fn msgbuf_ctrl_raw(&self, idx: usize) -> u32 {
+        if idx >= MB_COUNT {
+            return 0;
+        }
+        // CAN_MB0_CTRL..CAN_MB15_CTRL are contiguous 32-bit registers.
+        let base = self.regs().can_mb0_ctrl().as_ptr() as *const u32;
+        unsafe { base.add(idx).read_volatile() }
+    }
+
     /// Set the base address for message buffer `idx` in RAM.
     pub fn msgbuf_base_addr(&self, idx: usize, addr: u32) {
         msgbuf_base_set(self.regs(), idx, addr);
@@ -646,15 +662,82 @@ impl Can {
 
     // ─── DMA ─────────────────────────────────────────────────────────────────
 
-    /// Set the RX DMA destination base address.
+    /// Arm a GDMA channel to move received-frame words out of `CAN_RX_DMA_DATA`
+    /// into `buf`. The transfer is armed immediately; await the returned future
+    /// after the frame has been (or is being) received.
     ///
-    /// C: `CANx->CAN_RXDMA_CFG = Addr`. The PAC has no writable address field
-    /// for this register in the standard fields, so the raw address is written
-    /// directly via `write_volatile`.
-    pub fn rx_dma_dest_base_addr(&self, addr: u32) {
+    /// SDK: ameba_can.c : CAN_RXGDMA_Init (peri-to-mem, 4-byte width, burst 1,
+    /// handshake `GDMA_HANDSHAKE_INTERFACE_CAN0_RX`/`CAN1_RX`).
+    ///
+    /// Required setup, verified on hardware:
+    /// 1. [`rx_dma_enable`](Self::rx_dma_enable)`(true)` (global `CAN_CTL.RXDMA_EN`);
+    /// 2. [`rx_dma_src_msize`](Self::rx_dma_src_msize)`(0)` to match the GDMA burst of 1;
+    /// 3. before **every** frame, [`msgbuf_ctrl_config`](Self::msgbuf_ctrl_config)
+    ///    on the RX buffer (hardware clears its `RXDMA_EN` after each frame),
+    ///    then [`ram_buffer_map`](Self::ram_buffer_map) to restore the BA fields it zeroes.
+    ///
+    /// A frame is streamed as `[id << 18, timestamp | dlc, data words...]`.
+    /// `buf.len()` must equal the frame's length in words, 2 + ceil(dlc / 4)
+    /// (at most [`RX_DMA_MAX_WORDS`]): a longer buffer never completes, a
+    /// shorter one truncates the frame.
+    ///
+    /// # Panics
+    ///
+    /// If `buf` is empty or longer than [`RX_DMA_MAX_WORDS`].
+    pub fn rx_dma_start<'a, const CH: u8>(
+        &self,
+        ch: &'a mut crate::dma::DmaChannel<CH, crate::dma::Async>,
+        buf: &'a mut [u32],
+    ) -> crate::dma::DmaFuture<'a, CH> {
+        use crate::dma::{Msize, TrParams, TrWidth};
+        assert!(
+            !buf.is_empty() && buf.len() <= RX_DMA_MAX_WORDS,
+            "rx_dma_start: buffer length must be 1..={RX_DMA_MAX_WORDS} words"
+        );
+        let hs_id = if core::ptr::eq(self.ptr, CAN0_PTR) {
+            20 // SDK: ameba_gdma.h : GDMA_HANDSHAKE_INTERFACE_CAN0_RX
+        } else {
+            21 // SDK: ameba_gdma.h : GDMA_HANDSHAKE_INTERFACE_CAN1_RX
+        };
+        let len = buf.len() * 4;
+        let tp = TrParams {
+            src_width: TrWidth::FourBytes,
+            dst_width: TrWidth::FourBytes,
+            src_msize: Msize::One,
+            dst_msize: Msize::One,
+            hs_id,
+        };
+        unsafe { crate::cache::dcache_clean_invalidate(buf.as_ptr() as *const u8, len) };
+        ch.periph_rx(
+            self.regs().can_rx_dma_data().as_ptr() as *const u32,
+            buf.as_mut_ptr() as *mut u8,
+            len,
+            tp,
+        )
+    }
+
+    /// Set the global RX DMA enable bit (`CAN_CTL.RXDMA_EN`).
+    ///
+    /// Per-buffer DMA enables in `CAN_MBx_CTRL` have no effect without this.
+    pub fn rx_dma_enable(&self, en: bool) {
+        self.regs()
+            .can_ctl()
+            .modify(|_, w| w.can_rxdma_en().bit(en));
+    }
+
+    /// Set the CAN-side RX DMA burst size (`CAN_RXDMA_CFG.RXDMA_SRC_MSIZE`):
+    /// 0 = 1, 1 = 4, 2 = 8, 3 = 16 words. Must match the GDMA source burst.
+    pub fn rx_dma_src_msize(&self, msize: u8) {
+        let reg = self.regs().can_rxdma_cfg().as_ptr();
         unsafe {
-            self.regs().can_rxdma_cfg().as_ptr().write_volatile(addr);
+            let v = reg.read_volatile();
+            reg.write_volatile((v & !(0x3 << 16)) | ((msize as u32 & 0x3) << 16));
         }
+    }
+
+    /// Read the raw `CAN_RXDMA_CFG` register.
+    pub fn rx_dma_cfg(&self) -> u32 {
+        self.regs().can_rxdma_cfg().read().bits()
     }
 
     /// Read the RX DMA data register.
@@ -664,9 +747,31 @@ impl Can {
 
     // ─── Clock ───────────────────────────────────────────────────────────────
 
-    /// Returns the CAN core clock frequency in Hz (currently fixed to 40 MHz XTAL).
-    pub fn core_clock_get() -> u32 {
-        XTAL_40M
+    /// Select XTAL (40 MHz) as the CAN core clock and disable both PLL dividers.
+    ///
+    /// Call once during single-threaded start-up, before enabling either
+    /// controller. Shared by CAN0 and CAN1.
+    pub fn core_clock_set() {
+        let lp_sys = unsafe { &*LpSys::PTR };
+        // SDK: sysreg_lsys.h : CKSL_CAN_XTAL = 0x0
+        lp_sys
+            .reg_cksl_grp0()
+            .modify(|_, w| unsafe { w.cksl_can().bits(0b00) });
+        lp_sys
+            .reg_ckd_fen_usb_pll()
+            .modify(|_, w| w.fen_usb_pll_can().clear_bit());
+        lp_sys
+            .reg_ckd_fen_sys_pll()
+            .modify(|_, w| w.fen_sys_pll_can().clear_bit());
+    }
+
+    /// CAN core clock frequency in Hz, or `None` until
+    /// [`core_clock_set`](Self::core_clock_set) has selected XTAL.
+    pub fn core_clock_get() -> Option<u32> {
+        let lp_sys = unsafe { &*LpSys::PTR };
+        // SDK: sysreg_lsys.h : LSYS_MASK_CKSL_CAN (x0 = XTAL)
+        let xtal = lp_sys.reg_cksl_grp0().read().cksl_can().bits() & 0b01 == 0;
+        xtal.then_some(XTAL_40M)
     }
 
     // ─── Bit timing calculation ───────────────────────────────────────────────
@@ -679,7 +784,7 @@ impl Can {
             return Err(BitTimingError::InvalidBitRate);
         }
 
-        let core_clock = Self::core_clock_get();
+        let core_clock = Self::core_clock_get().ok_or(BitTimingError::ClockNotSet)?;
         let sample_point = default_sample_point(bit_rate);
 
         let max_tq = SYNC_SEG
@@ -855,6 +960,13 @@ impl Can {
                 .bit(msg.rtr_mask)
         });
 
+        // CS: rxtx=0 (RX), autoreply=0. ACC_CS is set above, so the staged CS
+        // is committed too; SDK CAN_SetRxMsgBuf leaves it untouched, which
+        // turns the buffer into a TX buffer if the last staged access was a
+        // TX write (rxtx=1). Clear it explicitly.
+        r.can_ram_cs()
+            .modify(|_, w| w.can_ram_rxtx().clear_bit().can_ram_autoreply().clear_bit());
+
         // Commit.
         r.can_ram_cmd().modify(|_, w| w.can_ram_start().set_bit());
         while r.can_ram_cmd().read().can_ram_start().bit_is_set() {}
@@ -975,9 +1087,8 @@ impl Can {
                 .set_bit()
         });
 
-        // Data stored in normal (non-reversed) order for auto-reply.
         if msg.frame_type == FrameType::Data {
-            self.ram_write_data_fwd(&msg.data);
+            self.ram_write_data(&msg.data);
         }
 
         self.ram_commit(msg.buf_idx, true);
@@ -1158,71 +1269,54 @@ impl Can {
         while r.can_ram_cmd().read().can_ram_start().bit_is_set() {}
     }
 
-    /// Write data words in reversed order (index 15 first, as C driver does).
+    // Data word mapping. SDK: ameba_can.c : CAN_WriteMsg / CAN_ReadMsg /
+    // CAN_TxAutoReply all reduce to Data_32[i] <-> CAN_RAM_DATA_x[15 - i]
+    // (CAN_RAM_DATA_x[0] is at offset 0x300). The PAC numbers these
+    // registers in reverse — can_ram_fddata_N sits at 0x300 + 4 * (15 - N),
+    // i.e. it *is* CAN_RAM_DATA_x[15 - N] — so data[i] <-> fddata_i.
+    // CAN 2.0 payload (data[0..2]) therefore lives in fddata_0/1 at
+    // 0x33C/0x338, the only data words a classic message buffer exchanges.
+
+    /// Write the 16 data words into the RAM staging registers.
     fn ram_write_data(&self, data: &[u32; 16]) {
         let r = self.regs();
-        // C: CANx->CAN_RAM_DATA_x[16 - i - 1] = TxMsg->Data_32[i]
-        // PAC names: can_ram_fddata_0 .. can_ram_fddata_15
-        // data[0] → fddata_15, data[15] → fddata_0
-        r.can_ram_fddata_15().write(|w| unsafe { w.bits(data[0]) });
-        r.can_ram_fddata_14().write(|w| unsafe { w.bits(data[1]) });
-        r.can_ram_fddata_13().write(|w| unsafe { w.bits(data[2]) });
-        r.can_ram_fddata_12().write(|w| unsafe { w.bits(data[3]) });
-        r.can_ram_fddata_11().write(|w| unsafe { w.bits(data[4]) });
-        r.can_ram_fddata_10().write(|w| unsafe { w.bits(data[5]) });
-        r.can_ram_fddata_9().write(|w| unsafe { w.bits(data[6]) });
-        r.can_ram_fddata_8().write(|w| unsafe { w.bits(data[7]) });
-        r.can_ram_fddata_7().write(|w| unsafe { w.bits(data[8]) });
-        r.can_ram_fddata_6().write(|w| unsafe { w.bits(data[9]) });
-        r.can_ram_fddata_5().write(|w| unsafe { w.bits(data[10]) });
-        r.can_ram_fddata_4().write(|w| unsafe { w.bits(data[11]) });
-        r.can_ram_fddata_3().write(|w| unsafe { w.bits(data[12]) });
-        r.can_ram_fddata_2().write(|w| unsafe { w.bits(data[13]) });
-        r.can_ram_fddata_1().write(|w| unsafe { w.bits(data[14]) });
-        r.can_ram_fddata_0().write(|w| unsafe { w.bits(data[15]) });
+        r.can_ram_fddata_0().write(|w| unsafe { w.bits(data[0]) });
+        r.can_ram_fddata_1().write(|w| unsafe { w.bits(data[1]) });
+        r.can_ram_fddata_2().write(|w| unsafe { w.bits(data[2]) });
+        r.can_ram_fddata_3().write(|w| unsafe { w.bits(data[3]) });
+        r.can_ram_fddata_4().write(|w| unsafe { w.bits(data[4]) });
+        r.can_ram_fddata_5().write(|w| unsafe { w.bits(data[5]) });
+        r.can_ram_fddata_6().write(|w| unsafe { w.bits(data[6]) });
+        r.can_ram_fddata_7().write(|w| unsafe { w.bits(data[7]) });
+        r.can_ram_fddata_8().write(|w| unsafe { w.bits(data[8]) });
+        r.can_ram_fddata_9().write(|w| unsafe { w.bits(data[9]) });
+        r.can_ram_fddata_10().write(|w| unsafe { w.bits(data[10]) });
+        r.can_ram_fddata_11().write(|w| unsafe { w.bits(data[11]) });
+        r.can_ram_fddata_12().write(|w| unsafe { w.bits(data[12]) });
+        r.can_ram_fddata_13().write(|w| unsafe { w.bits(data[13]) });
+        r.can_ram_fddata_14().write(|w| unsafe { w.bits(data[14]) });
+        r.can_ram_fddata_15().write(|w| unsafe { w.bits(data[15]) });
     }
 
-    /// Write data words in forward order (for auto-reply: C uses [i] = Data_32[15-i]).
-    fn ram_write_data_fwd(&self, data: &[u32; 16]) {
-        let r = self.regs();
-        // C: CANx->CAN_RAM_DATA_x[i] = TxMsg->Data_32[(16 - i - 1)]
-        r.can_ram_fddata_0().write(|w| unsafe { w.bits(data[15]) });
-        r.can_ram_fddata_1().write(|w| unsafe { w.bits(data[14]) });
-        r.can_ram_fddata_2().write(|w| unsafe { w.bits(data[13]) });
-        r.can_ram_fddata_3().write(|w| unsafe { w.bits(data[12]) });
-        r.can_ram_fddata_4().write(|w| unsafe { w.bits(data[11]) });
-        r.can_ram_fddata_5().write(|w| unsafe { w.bits(data[10]) });
-        r.can_ram_fddata_6().write(|w| unsafe { w.bits(data[9]) });
-        r.can_ram_fddata_7().write(|w| unsafe { w.bits(data[8]) });
-        r.can_ram_fddata_8().write(|w| unsafe { w.bits(data[7]) });
-        r.can_ram_fddata_9().write(|w| unsafe { w.bits(data[6]) });
-        r.can_ram_fddata_10().write(|w| unsafe { w.bits(data[5]) });
-        r.can_ram_fddata_11().write(|w| unsafe { w.bits(data[4]) });
-        r.can_ram_fddata_12().write(|w| unsafe { w.bits(data[3]) });
-        r.can_ram_fddata_13().write(|w| unsafe { w.bits(data[2]) });
-        r.can_ram_fddata_14().write(|w| unsafe { w.bits(data[1]) });
-        r.can_ram_fddata_15().write(|w| unsafe { w.bits(data[0]) });
-    }
-
-    /// Read data words in reversed order.
+    /// Read the 16 data words from the RAM staging registers.
     fn ram_read_data(&self, data: &mut [u32; 16]) {
         let r = self.regs();
-        data[0] = r.can_ram_fddata_15().read().bits();
-        data[1] = r.can_ram_fddata_14().read().bits();
-        data[2] = r.can_ram_fddata_13().read().bits();
-        data[3] = r.can_ram_fddata_12().read().bits();
-        data[4] = r.can_ram_fddata_11().read().bits();
-        data[5] = r.can_ram_fddata_10().read().bits();
-        data[6] = r.can_ram_fddata_9().read().bits();
-        data[7] = r.can_ram_fddata_8().read().bits();
-        data[8] = r.can_ram_fddata_7().read().bits();
-        data[9] = r.can_ram_fddata_6().read().bits();
-        data[10] = r.can_ram_fddata_5().read().bits();
-        data[11] = r.can_ram_fddata_4().read().bits();
-        data[12] = r.can_ram_fddata_3().read().bits();
-        data[13] = r.can_ram_fddata_2().read().bits();
-        data[14] = r.can_ram_fddata_1().read().bits();
-        data[15] = r.can_ram_fddata_0().read().bits();
+        data[0] = r.can_ram_fddata_0().read().bits();
+        data[1] = r.can_ram_fddata_1().read().bits();
+        data[2] = r.can_ram_fddata_2().read().bits();
+        data[3] = r.can_ram_fddata_3().read().bits();
+        data[4] = r.can_ram_fddata_4().read().bits();
+        data[5] = r.can_ram_fddata_5().read().bits();
+        data[6] = r.can_ram_fddata_6().read().bits();
+        data[7] = r.can_ram_fddata_7().read().bits();
+        data[8] = r.can_ram_fddata_8().read().bits();
+        data[9] = r.can_ram_fddata_9().read().bits();
+        data[10] = r.can_ram_fddata_10().read().bits();
+        data[11] = r.can_ram_fddata_11().read().bits();
+        data[12] = r.can_ram_fddata_12().read().bits();
+        data[13] = r.can_ram_fddata_13().read().bits();
+        data[14] = r.can_ram_fddata_14().read().bits();
+        data[15] = r.can_ram_fddata_15().read().bits();
     }
 }
 
